@@ -4,7 +4,7 @@
 
 ---
 
-## Current State — v0.1.0
+## ✅ Shipped — v0.1.0
 
 - SessionStart hook injects top cards (TL;DR + key facts, 1,200-token budget)
 - Cards scored by importance + recency
@@ -16,33 +16,29 @@
 
 ---
 
-## Phase 1 — Smarter Injection `v0.2`
+## ✅ Shipped — v0.2.0 (Smarter Injection)
 
 **Goal:** Make the right cards show up at the right time without the user doing anything.
 
-### Topic-aware injection scoring
+### Topic-aware injection scoring ✅
 
-Parse the user's opening message and boost cards whose topics match. If the session starts with "let's work on the auth flow", auth-related cards rank higher regardless of age.
+- Keyword extraction from user's opening message in `load_memory.py`
+- Cards whose topics/title overlap with opening message keywords get +3 score boost
+- Pure Python, zero dependencies
 
-- Add topic-matching score: +3 if card topics overlap with opening message keywords
-- Extract keywords from first user message in the hook script
-- Update `load_memory.py` scoring logic
-
-### Project-aware filtering
-
-Add a `project` field to context cards. The hook detects which project is active (from the opening message or an explicit `/set-project` command) and filters to relevant cards only.
+### Project-aware filtering ✅
 
 - New frontmatter field: `project: my-project-name`
-- `/set-project <name>` command to set active project for session
-- Hook reads active project and boosts matching cards
+- `/set-project <name>` command to set/clear active project, stored in `.coworkmem_config.json`
+- Hook reads active project and boosts matching cards (+2)
+- Web viewer project filter dropdown with active project pre-selected
 
-### SessionEnd auto-save prompt
+### SessionEnd auto-save nudge ✅
 
-When a session ends or goes idle, Claude checks if anything significant happened and prompts to save — so nothing gets lost even if the user forgets.
-
-- New `SessionStop` hook
-- Detects if session had meaningful content (decisions, tasks, technical facts)
-- Prompts: "This session covered X — save a memory card?"
+- New Stop hook (`save_prompt.py`) fires after each Claude response
+- Tracks session turn count and end-of-session phrases ("thanks", "done", "ship it", etc.)
+- Nudges once per session when session is substantial (≥8 turns) and hasn't been saved recently
+- Output: `"💾 CoworkMem: This looks like a good stopping point. Run /save-memory..."`
 
 ---
 
