@@ -129,6 +129,7 @@ def load_card(filepath: str) -> dict | None:
         "topics": meta.get("topics", []) if isinstance(meta.get("topics"), list) else [],
         "title": meta.get("title", os.path.basename(filepath)),
         "importance": meta.get("importance", "medium"),
+        "project": meta.get("project", ""),
         "private": meta.get("private", False),
         "tokens": meta.get("tokens", 0),
         "tldr": sections.get("TL;DR", ""),
@@ -410,6 +411,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <input type="text" id="searchInput" placeholder="Search memories…" autocomplete="off" />
     <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
   </div>
+  <select id="projectFilter" style="border:1px solid #dfe1e5; border-radius:20px; padding:7px 12px; font-size:0.82rem; color:#5f6368; outline:none; background:#fff; cursor:pointer;">
+    <option value="">All projects</option>
+  </select>
 </div>
 
 <div class="filters" id="filterBar">
@@ -436,12 +440,33 @@ const TYPE_COLORS = {
 let allCards = [];
 let activeType = 'all';
 let searchQuery = '';
+let activeProject = '';
+let configProject = '';
 
-// ── Load cards from server ──────────────────────────────────────────────────
+// ── Load cards + config from server ──────────────────────────────────────────
 async function loadCards() {
   try {
-    const res = await fetch('/api/memories');
-    allCards = await res.json();
+    const [cardsRes, configRes] = await Promise.all([
+      fetch('/api/memories'),
+      fetch('/api/config')
+    ]);
+    allCards = await cardsRes.json();
+    const config = await configRes.json();
+    configProject = config.active_project || '';
+
+    // Populate project dropdown
+    const projects = [...new Set(allCards.map(c => c.project).filter(Boolean))].sort();
+    const sel = document.getElementById('projectFilter');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">All projects</option>';
+    projects.forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p + (p === configProject ? ' ★' : '');
+      sel.appendChild(opt);
+    });
+    sel.value = current || (configProject || '');
+    activeProject = sel.value;
+
     render();
   } catch(e) {
     document.getElementById('cardsGrid').innerHTML = '<div class="empty"><p>Could not load memories</p><small>' + e.message + '</small></div>';
@@ -503,6 +528,7 @@ function renderCard(card, query) {
         <div class="card-favicon ${bgClass}">${typeLabel[0]}</div>
         <div class="card-breadcrumb">
           coworkmem › <span class="crumb-path">${escHtml(typeLabel)}</span>
+          ${card.project ? `<span class="crumb-path"> · 📁 ${escHtml(card.project)}</span>` : ''}
           ${dateStr ? `<span class="crumb-path"> · ${dateStr}</span>` : ''}
           ${sessionStr ? `<span class="crumb-path"> · ${sessionStr}</span>` : ''}
         </div>
@@ -533,6 +559,7 @@ function render() {
   let filtered = allCards.filter(c => {
     if (activeType === 'private') return c.private === true;
     if (activeType !== 'all' && c.type !== activeType) return false;
+    if (activeProject && c.project !== activeProject) return false;
     return matchesSearch(c, q);
   });
 
@@ -596,6 +623,12 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
     activeType = btn.dataset.type;
     render();
   });
+});
+
+// ── Project filter ───────────────────────────────────────────────────────────
+document.getElementById('projectFilter').addEventListener('change', e => {
+  activeProject = e.target.value;
+  render();
 });
 
 // ── Keyboard shortcut: / to focus search ─────────────────────────────────────
@@ -664,6 +697,17 @@ class CoworkmemHandler(http.server.BaseHTTPRequestHandler):
             # Don't send _raw field to keep payload small
             safe = [{k: v for k, v in c.items() if k != "_raw"} for c in cards]
             self.send_json(safe)
+
+        elif path == "/api/config":
+            config_file = os.path.join(memories_dir, ".coworkmem_config.json")
+            if os.path.exists(config_file):
+                try:
+                    with open(config_file) as f:
+                        self.send_json(json.load(f))
+                except Exception:
+                    self.send_json({})
+            else:
+                self.send_json({})
 
         elif path == "/api/stats":
             cards = load_all_cards(memories_dir)
