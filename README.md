@@ -4,6 +4,27 @@
 
 ---
 
+## What's shipped — v0.1.0
+
+| Feature | Status |
+|---------|--------|
+| SessionStart hook — auto-injects top cards at session start | ✅ Shipped |
+| Cards scored by importance + recency | ✅ Shipped |
+| TL;DR + key facts injection (1,200-token budget) | ✅ Shipped |
+| `/save-memory` — save current session to a context card | ✅ Shipped |
+| `/load-memory` — search and display past cards | ✅ Shipped |
+| `/capture-session` — compress a pasted transcript into cards | ✅ Shipped |
+| `/view-memories` — launch local web viewer | ✅ Shipped |
+| Google Search-style light mode web viewer at localhost:4242 | ✅ Shipped |
+| Search across titles, summaries, key facts, topics | ✅ Shipped |
+| Filter by card type (project, task, decision, learning…) | ✅ Shipped |
+| Private cards — never injected or shown in viewer | ✅ Shipped |
+| Local markdown files — zero external dependencies | ✅ Shipped |
+| INDEX.md — auto-maintained card index | ✅ Shipped |
+| 7 card types with token targets | ✅ Shipped |
+
+---
+
 ## What is CoworkMem?
 
 Claude Cowork starts every session fresh — it has no memory of past conversations, decisions, or project state. CoworkMem solves this by saving your work as compact **context cards** (structured markdown files) and automatically injecting the most relevant ones at the start of each new session.
