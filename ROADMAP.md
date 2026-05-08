@@ -46,13 +46,31 @@
 
 **Goal:** Find the right memory even when you don't remember the exact words.
 
-### Semantic search
+### Why keyword matching falls short
 
-Replace keyword matching in `/load-memory` with embedding-based similarity search. "What did I decide about the database?" finds the right card even if it never uses the word "database".
+The current topic scoring uses exact keyword intersection — if you saved a card about "OAuth" and open a session saying "let's fix the login flow", the topic score is 0 because the words don't overlap. The same problem applies to "database" vs "Postgres", "deploy" vs "ship", and any other synonym pair.
 
-- Use `sentence-transformers` (local, no API key needed) to embed cards on save
-- Store embeddings alongside card files
-- `/load-memory` queries by cosine similarity, not just string match
+**When this starts to hurt:** with fewer than ~30 cards, recency dominates and the right cards surface anyway. At 50–200 cards the wrong cards start consuming your 1,200-token injection budget. Beyond 200 cards, better retrieval becomes essential.
+
+### Step 1 — TF-IDF with bigrams (no model download)
+
+Before jumping to full semantic vectors, a TF-IDF index (with bigram support) closes most of the synonym gap with zero external dependencies and near-instant indexing.
+
+- Build a lightweight TF-IDF index of all card content at hook load time
+- "auth flow" → matches "authentication" and "OAuth" via bigram overlap
+- Estimated improvement: keyword recall ~65% → TF-IDF recall ~80%
+- Replaces the current set-intersection topic score in `load_memory.py`
+
+### Step 2 — Semantic search with sentence-transformers
+
+Replace TF-IDF with embedding-based similarity search for the full semantic understanding step.
+
+- Use `sentence-transformers` (local, no API key, ~500MB one-time download)
+- Embed each card's TL;DR + key facts on save; store alongside the `.md` file
+- `/load-memory` queries by cosine similarity — "what did I decide about error handling?" finds the right card regardless of exact wording
+- Session injection uses the same embeddings, re-ranked by semantic similarity to the opening message
+- Estimated improvement: ~90%+ recall vs ~65% for current keyword approach
+- **Note:** adds 2–3 second embed step on `/save-memory`; injection reads pre-computed embeddings (fast)
 
 ### Full-text search in viewer
 
