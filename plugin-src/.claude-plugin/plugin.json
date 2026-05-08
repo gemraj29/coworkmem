@@ -1,0 +1,9 @@
+{
+  "name": "coworkmem",
+  "version": "0.1.0",
+  "description": "Persistent long-term memory for Claude Cowork sessions — auto-injects context cards at session start",
+  "author": {
+    "name": "gemraj"
+  },
+  "keywords": ["memory", "context", "sessions", "productivity"]
+}
